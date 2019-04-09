@@ -1,0 +1,807 @@
+---
+title: "Age-crime trends in convictions in Scottish courts 1990 – 2018"
+date: "9 April 2019"
+output:
+  html_document:
+    theme: yeti
+    fig_caption: true
+    toc: true
+    toc_float:
+      collapsed: false
+runtime: shiny
+---
+| . | . |
+|:--|--:|
+| <img src="SGLogo.png" alt="Scottish Government" width="200"/> | <img src="natstats.png" alt="National Statistics" width="50"/> |
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(shiny)
+library(plotly)
+load("convictions_data.RData")
+load("tabIndex.RData")
+
+#Recovering information form the dataset
+gendersAre = levels(allCrimes$Gender)
+measuresAre = levels(allCrimes$`Measurement Type`) 
+limitsAre = c(min(allCrimes$Year), max(allCrimes$Year)) # maximum and minimum years
+
+#The following years will be retained in any plot unless otherwise stated
+allYears = c(1990,2000,2010,2018) 
+
+```
+
+## Background
+
+In his 1831 publication, [Research on the Propensity for Crime at Different Ages](https://www.ncjrs.gov/App/Publications/abstract.aspx?ID=94009), Adolphe Quetelet first recognised the relationship between age and crime. Since this time, age-crime curves have been used to illustrate this relationship, where volume of crime increases rapidly with age until a peak in the late teenage years before declining again. This has become one of the ‘brute facts’ of criminology literature.
+
+This paper and the associated [Shiny App](https://scotland.shinyapps.io/sg-convictions/) aim to look in more detail at the age and gender profile of those convicted of different crimes over time to examine differing patterns in the age crime curve. The App provides a unique and innovative way to explore these relationships using animated graphs.
+
+The [number of convictions](https://www.gov.scot/publications/criminal-proceedings-scotland-2017-18/) in Scotland’s courts has decreased by 51% from 167,610 in 1989-90 to 82,716 in 2017-18. Recent work by [Matthews & Minton](https://www.researchgate.net/publication/321282060_Rethinking_one_of_criminology%27s_%27brute_facts%27_The_age-crime_curve_and_the_crime_drop_in_Scotland), has explored in detail the link between convictions in Scotland’s courts and the observed crime drop.
+
+Years in the following sections are financial years, but referred to by the year in which they end, e.g. 2017-18 is henceforth referred to at 2018.
+
+## Crimes and offences
+
+Convictions for **all crime and offences** displayed a typical late teenage peak in 1990. This peak has consistently ‘flattened’ over time and in 2018, peaked in the early 30s but had a much wider, flatter spread overall.
+
+```{r allCOs, echo=FALSE, fig.cap='Press play'}
+# select vectors for THIS plot
+TYPE1 = tabIndex$CrimeType[1]
+GENDER1 = gendersAre[3]
+MEASURE1 = measuresAre[2]
+allCOs = subset(allCrimes,
+                   `Crime Type` == TYPE1 & 
+                     Gender == GENDER1 & 
+                     `Measurement Type` == MEASURE1 & 
+                     Age != "All")
+topY1 = max(allCOs$Convictions)
+
+sliderInput(inputId = "year1",
+                    sep="", 
+                    label="Year",
+                    min=1990,
+                    max=2018,
+                    value = 1990,
+                    step = 1,
+                    animate = animationOptions(interval=500)
+        )
+
+renderPlotly({
+  theseYears = c(allYears[allYears < input$year1], input$year1)
+  p1 = allCOs %>% 
+    filter(Year %in% theseYears) %>% 
+    plot_ly(x = ~Age, y = ~Convictions, split = ~Year,
+            type = 'scatter', mode = 'lines',
+            text = ~paste0('Year: ', Year,
+                           ' <br>Age: ', Age,
+                           ' <br>Convictions: ', round(Convictions, digits=1),"   "),
+            hoverinfo = 'text'
+      ) %>%
+    layout(xaxis = list(showline = FALSE,
+                        range = c(12,90),
+                        type = 'category',
+                        tickfont = list(size = 14),
+                        tickangle = 0,
+                        dtick = 6,
+                        titlefont = list(size = 16),
+                        title = 'Age'),
+           yaxis = list(tickfont = list(size = 14),
+                        titlefont = list(size = 16),
+                        title = paste0("Convictions (",MEASURE1,")"),
+                        range = c(0,topY1))
+    ) %>% 
+    layout(hovermode = 'x')
+  
+    p1$elementId = NULL # deals with weird shiny/plotly conflict
+    p1 # output the plot
+  })
+```
+
+### Attempted murder and serious assault
+
+Convictions for **attempted murder and serious assault** show a different picture. Here, we see the same peak in convictions in the late teens but numbers of convictions increase over time until declining again by 2018. In 2018, we can see a shift from the teenage peak to a wider spread of convictions through the 20s and into the 30s.
+
+```{r murder, echo=FALSE}
+GENDER2 = gendersAre[3]
+MEASURE2 = measuresAre[2]
+TYPE2 = tabIndex$CrimeType[5]
+
+
+murderData = subset(allCrimes,
+                   `Crime Type` == TYPE2 & 
+                     Gender == GENDER2 & 
+                     `Measurement Type` == MEASURE2 & 
+                     Age != "All")
+topY2 = max(murderData$Convictions)
+
+sliderInput(inputId = "year2",
+                    sep="", 
+                    label="Year",
+                    min=1990,
+                    max=2018,
+                    value = 1990,
+                    step = 1,
+                    animate = animationOptions(interval=500)
+        )
+
+renderPlotly({
+  theseYears = c(allYears[allYears < input$year2], input$year2)
+  p2 = murderData %>% 
+    filter(Year %in% theseYears) %>% 
+    plot_ly(x = ~Age, y = ~Convictions, split = ~Year,
+            type = 'scatter', mode = 'lines',
+            text = ~paste0('Year: ', Year,
+                           ' <br>Age: ', Age,
+                           ' <br>Convictions: ', round(Convictions,digits=1),"   "),
+            hoverinfo = 'text'
+      ) %>% 
+      layout(xaxis = list(showline = FALSE,
+                          range = c(12,90),
+                          type = 'category',
+                          tickfont = list(size = 14),
+                          tickangle = 0,
+                          dtick = 6,
+                          titlefont = list(size = 16),
+                          title = 'Age'),
+             yaxis = list(tickfont = list(size = 14),
+                          titlefont = list(size = 16),
+                          title = paste0("Convictions (",MEASURE2,")"),
+                          range = c(0,topY2))
+      ) %>% layout(hovermode = 'x')
+    p2$elementId = NULL
+    p2
+  })
+```
+
+### Sexual crime
+
+If we consider convictions for **sexual crime**, a different picture emerges. Here, although there was a peak for younger ages in 1990, this peak was not as defined at age 18 as it was for other crime groups instead stretching until the mid to late 20s. By 2018 we can see that this peak has  flattened and that there is a much wider spread of ages, including an apparent increase in convictions for those aged over 40. 
+
+The sexual crime group includes: rape and attempted rape, sexual assault, crimes associated with prostitution and other sexual crimes. It should be noted here that this time period encompasses the implementation of the [Sexual Offences Scotland Act 2009](https://www.legislation.gov.uk/asp/2009/9/contents) and that there may be some changes to recording practice as a result.
+
+```{r sexual, echo=FALSE}
+GENDER3 = gendersAre[3]
+MEASURE3 = measuresAre[2]
+TYPE3 = tabIndex$CrimeType[8]
+
+sexualData = subset(allCrimes,
+                   `Crime Type` == TYPE3 & 
+                     Gender == GENDER3 & 
+                     `Measurement Type` == MEASURE3 & 
+                     Age != "All")
+topY3 = max(sexualData$Convictions)
+
+sliderInput(inputId = "year3",
+                    sep="", 
+                    label="Year",
+                    min=1990,
+                    max=2018,
+                    value = 1990,
+                    step = 1,
+                    animate = animationOptions(interval=500)
+        )
+
+renderPlotly({
+  theseYears = c(allYears[allYears < input$year3], input$year3)
+  p1 = sexualData %>% 
+    filter(Year %in% theseYears) %>% 
+    plot_ly(x = ~Age, y = ~Convictions, split = ~Year,
+            type = 'scatter', mode = 'lines',
+            text = ~paste0('Year: ', Year,
+                           ' <br>Age: ', Age,
+                           ' <br>Convictions: ', round(Convictions,digits=1),"   "),
+            hoverinfo = 'text'
+      ) %>% 
+      layout(xaxis = list(showline = FALSE,
+                          range = c(12,90),
+                          type = 'category',
+                          tickfont = list(size = 14),
+                          tickangle = 0,
+                          dtick = 6,
+                          titlefont = list(size = 16),
+                          title = 'Age'),
+             yaxis = list(tickfont = list(size = 14),
+                          titlefont = list(size = 16),
+                          title = paste0("Convictions (",MEASURE3,")"),
+                          range = c(0,topY3))
+      ) %>% layout(hovermode = 'x')
+    p1$elementId = NULL
+    p1
+  })
+```
+
+### Other sexual crimes
+
+Recent changes in numbers of sexual crimes recorded have been attributed to a rise in **other sexual crime**; covering (amongst other things) those crimes commonly referred to as cyber-enabled crime. Looking in more detail at this group may help explain the patterns seen in the overall sexual crime group. Here again we see a shift from the common pronounced peak around age 18 in 1990. By 2018 convictions are still high for younger age groups but we see a much greater spread with higher numbers of convictions across all ages. Particularly notable perhaps is the increasing number of convictions for those in the 40+ age band. 
+
+The [Abusive Behaviour and Sexual Harm (Scotland) Act 2016](http://www.legislation.gov.uk/asp/2016/22/contents/enacted) has increased the number of crimes recorded in this group, we are yet to fully understand the effect this will have on convictions.
+
+```{r othSexual, echo=FALSE}
+GENDER4 = gendersAre[3]
+MEASURE4 = measuresAre[2]
+TYPE4 = tabIndex$CrimeType[12]
+
+othSexData = subset(allCrimes,
+                   `Crime Type` == TYPE4 & 
+                     Gender == GENDER4 & 
+                     `Measurement Type` == MEASURE4 & 
+                     Age != "All")
+topY4 = max(othSexData$Convictions)
+
+sliderInput(inputId = "year4",
+                    sep="", 
+                    label="Year",
+                    min=1990,
+                    max=2018,
+                    value = 1990,
+                    step = 1,
+                    animate = animationOptions(interval=500)
+        )
+
+renderPlotly({
+  theseYears = c(allYears[allYears < input$year4], input$year4)
+  p1 = othSexData %>% 
+    filter(Year %in% theseYears) %>% 
+    plot_ly(x = ~Age, y = ~Convictions, split = ~Year,
+            type = 'scatter', mode = 'lines',
+            text = ~paste0('Year: ', Year,
+                           ' <br>Age: ', Age,
+                           ' <br>Convictions: ', round(Convictions,digits=1),"   "),
+            hoverinfo = 'text'
+      ) %>% 
+      layout(xaxis = list(showline = FALSE,
+                          range = c(12,90),
+                          type = 'category',
+                          tickfont = list(size = 14),                       
+                          tickangle = 0,
+                          dtick = 6,
+                          titlefont = list(size = 16),
+                          title = 'Age'),
+             yaxis = list(tickfont = list(size = 14),
+                          titlefont = list(size = 16),
+                          title = paste0("Convictions (",MEASURE4,")"),
+                          range = c(0,topY4))
+      ) %>% layout(hovermode = 'x')
+    p1$elementId = NULL
+    p1
+  })
+```
+
+### Crimes of dishonesty
+
+**Crimes of dishonesty** (including housebreaking, shoplifting and theft of or from a vehicle) displayed a typical teenage peak in 1990. The difference here is in the rate at which this peak declined and moved towards convictions for older people. After increasing for a year or two, the teenage peak begins to decline and by the early 2000s has become a much flatter peak from around age 18 to 25. Through the late 2000s we continue to see a flattening of the peak and then eventually we can see a much smaller ‘peak’ appearing at around age 40.
+
+```{r dishon, echo=FALSE}
+GENDER5 = gendersAre[3]
+MEASURE5 = measuresAre[2]
+TYPE5 = tabIndex$CrimeType[13]
+
+dishonData = subset(allCrimes,
+                   `Crime Type` == TYPE5 & 
+                     Gender == GENDER5 & 
+                     `Measurement Type` == MEASURE5 & 
+                     Age != "All")
+topY5 = max(dishonData$Convictions)
+
+sliderInput(inputId = "year5",
+                    sep="", 
+                    label="Year",
+                    min=1990,
+                    max=2018,
+                    value = 1990,
+                    step = 1,
+                    animate = animationOptions(interval=500)
+        )
+
+renderPlotly({
+  theseYears = c(allYears[allYears < input$year5], input$year5)
+  p1 = dishonData %>% 
+    filter(Year %in% theseYears) %>% 
+    plot_ly(x = ~Age, y = ~Convictions, split = ~Year,
+            type = 'scatter', mode = 'lines',
+            text = ~paste0('Year: ', Year,
+                           ' <br>Age: ', Age,
+                           ' <br>Convictions: ', round(Convictions,digits=1),"   "),
+            hoverinfo = 'text'
+      ) %>% 
+      layout(xaxis = list(showline = FALSE,
+                          range = c(12,90),
+                          type = 'category',
+                          tickfont = list(size = 14),
+                          tickangle = 0,         
+                          dtick = 6,
+                          titlefont = list(size = 16),
+                          title = 'Age'),
+             yaxis = list(tickfont = list(size = 14),
+                          titlefont = list(size = 16),
+                          title = paste0("Convictions (",MEASURE5,")"),
+                          range = c(0,topY5))
+      ) %>% layout(hovermode = 'x')
+    p1$elementId = NULL
+    p1
+  })
+```
+
+### Shoplifting
+
+If we look in more detail at convictions for **shoplifting**, we see an entirely different pattern. Here, we don’t see the same teenage peak in 1990 and instead we see a broader range of ages (17-25) making up a flatter peak. We see convictions fluctuate in the 1990s before displaying a traditional teenage peak around 1998. We then see this peak maintained but moving through ages until by 2010 we see a peak at age 28. The peak continues to move and by 2018, convictions for 40 year olds are amongst the highest. It is interesting to note that overall volumes of convictions for shoplifting are at similar levels in 1990 and 2018.
+
+```{r shoplift, echo=FALSE}
+GENDER6 = gendersAre[3]
+MEASURE6 = measuresAre[2]
+TYPE6 = tabIndex$CrimeType[18]
+
+shopliftData = subset(allCrimes,
+                   `Crime Type` == TYPE6 & 
+                     Gender == GENDER6 & 
+                     `Measurement Type` == MEASURE6 & 
+                     Age != "All")
+topY6 = max(shopliftData$Convictions)
+
+sliderInput(inputId = "year6",
+                    sep="", 
+                    label="Year",
+                    min=1990,
+                    max=2018,
+                    value = 1990,
+                    step = 1,
+                    animate = animationOptions(interval=500)
+        )
+
+renderPlotly({
+  theseYears = c(allYears[allYears < input$year6], input$year6)
+  p1 = shopliftData %>% 
+    filter(Year %in% theseYears) %>% 
+    plot_ly(x = ~Age, y = ~Convictions, split = ~Year,
+            type = 'scatter', mode = 'lines',
+            text = ~paste0('Year: ', Year,
+                           ' <br>Age: ', Age,
+                           ' <br>Convictions: ', round(Convictions,digits=1),"   "),
+            hoverinfo = 'text'
+      ) %>% 
+      layout(xaxis = list(showline = FALSE,
+                          range = c(12,90),
+                          type = 'category',
+                          tickfont = list(size = 14),
+                          tickangle = 0,
+                          dtick = 6,
+                          titlefont = list(size = 16),
+                          title = 'Age'),
+             yaxis = list(tickfont = list(size = 14),
+                          titlefont = list(size = 16),
+                          title = paste0("Convictions (",MEASURE6,")"),
+                          range = c(0,topY6))
+      ) %>% layout(hovermode = 'x')
+    p1$elementId = NULL
+    p1
+  })
+```
+
+### Crimes against public justice
+
+Of all crimes proceeded against in Scotland’s courts in 2017-18, **crimes against public justice** accounted for over a quarter of them. When we look at the age crime curve we see a peak at age 19 in 1990, this peak increases in volume until reaching a high in 1996 and then returning to 1990 levels in 1998. In the early 2000s, although there remains a peak at age 19, we start to see increases in convictions for older people. By 2009, volumes have increased across all ages but the peak at 19 is still evident. From 2009 onwards, the peak at age 19 steadily declines while convictions for older ages continue to increase meaning that by 2018 we see an almost equal spread of convictions between ages 19 and 40 before seeing a gradual tail off to around age 60.
+
+```{r pubjus, echo=FALSE}
+GENDER12 = gendersAre[3]
+MEASURE12 = measuresAre[2]
+TYPE12 = tabIndex$CrimeType[26]
+pjYears = c(1990,1996,2009,2018)
+
+pubjusData = subset(allCrimes,
+                   `Crime Type` == TYPE12 & 
+                     Gender == GENDER12 & 
+                     `Measurement Type` == MEASURE12 & 
+                     Age != "All")
+topY12 = max(pubjusData$Convictions)
+
+sliderInput(inputId = "year12",
+                    sep="", 
+                    label="Year",
+                    min=1990,
+                    max=2018,
+                    value = 1990,
+                    step = 1,
+                    animate = animationOptions(interval=500)
+        )
+
+renderPlotly({
+  theseYears = c(pjYears[pjYears < input$year12], input$year12)
+  p1 = pubjusData %>% 
+    filter(Year %in% theseYears) %>% 
+    plot_ly(x = ~Age, y = ~Convictions, split = ~Year,
+            type = 'scatter', mode = 'lines',
+            text = ~paste0('Year: ', Year,
+                           ' <br>Age: ', Age,
+                           ' <br>Convictions: ', round(Convictions,digits=1),"   "),
+            hoverinfo = 'text'
+      ) %>% 
+      layout(xaxis = list(showline = FALSE,
+                          range = c(12,90),
+                          type = 'category',
+                          tickfont = list(size = 14),
+                          tickangle = 0,
+                          dtick = 6,
+                          titlefont = list(size = 16),
+                          title = 'Age'),
+             yaxis = list(tickfont = list(size = 14),
+                          titlefont = list(size = 16),
+                          title = paste0("Convictions (",MEASURE12,")"),
+                          range = c(0,topY12))
+      ) %>% layout(hovermode = 'x')
+    p1$elementId = NULL
+    p1
+  })
+```
+
+### Handling an offensive weapon
+
+In 1990, convictions in Scotland’s courts for **handling an offensive weapon** showed a small peak for those  in their late teens but numbers overall were low. Numbers of convictions increased across all ages until around 2007, when there was still a peak evident at age 18. Convictions for the younger ages start to decline around this time, although numbers of convictions for older people are maintained. By the mid to late 2010s we see conviction levels fairly stable with no discernible peak for young people but rather a spread across ages 18-40.
+
+```{r weapon, echo=FALSE}
+GENDER13 = gendersAre[3]
+MEASURE13 = measuresAre[2]
+TYPE13 = tabIndex$CrimeType[27]
+weapYears = c(1990,2000,2007,2018)
+
+weaponData = subset(allCrimes,
+                   `Crime Type` == TYPE13 & 
+                     Gender == GENDER13 & 
+                     `Measurement Type` == MEASURE13 & 
+                     Age != "All")
+topY13 = max(weaponData$Convictions)
+
+sliderInput(inputId = "year13",
+                    sep="", 
+                    label="Year",
+                    min=1990,
+                    max=2018,
+                    value = 1990,
+                    step = 1,
+                    animate = animationOptions(interval=500)
+        )
+
+renderPlotly({
+  theseYears = c(weapYears[weapYears < input$year13], input$year13)
+  p1 = weaponData %>% 
+    filter(Year %in% theseYears) %>% 
+    plot_ly(x = ~Age, y = ~Convictions, split = ~Year,
+            type = 'scatter', mode = 'lines',
+            text = ~paste0('Year: ', Year,
+                           ' <br>Age: ', Age,
+                           ' <br>Convictions: ', round(Convictions,digits=1),"   "),
+            hoverinfo = 'text'
+      ) %>% 
+      layout(xaxis = list(showline = FALSE,
+                          range = c(12,90),
+                          type = 'category',
+                          tickfont = list(size = 14),
+                          tickangle = 0,
+                          dtick = 6,
+                          titlefont = list(size = 16),
+                          title = 'Age'),
+             yaxis = list(tickfont = list(size = 14),
+                          titlefont = list(size = 16),
+                          title = paste0("Convictions (",MEASURE13,")"),
+                          range = c(0,topY13))
+      ) %>% layout(hovermode = 'x')
+    p1$elementId = NULL
+    p1
+  })
+```
+
+### Drug crimes
+
+In 1990, convictions for **drug crimes** were reasonably low, and although there was a small peak for younger ages, this was spread from age 18-23. Convictions then increase rapidly until 1996 with a now definite peak at 20 years of age. Over the next few years we see this peak declining whilst at the same time we see an increase in convictions for older people. We can follow the peak in convictions as it progresses with age until by 2018 we see an almost equal spread of convictions between ages 20 to 40, before convictions start tailing off gradually to age 60.
+
+```{r drug, echo=FALSE}
+
+allYearsD = c(1990,1998,2010,2018)
+GENDER7 = gendersAre[3]
+MEASURE7 = measuresAre[2]
+TYPE7 = tabIndex$CrimeType[28]
+
+drugData = subset(allCrimes,
+                   `Crime Type` == TYPE7 & 
+                     Gender == GENDER7 & 
+                     `Measurement Type` == MEASURE7 & 
+                     Age != "All")
+topY7 = ceiling(max(drugData$Convictions))
+
+sliderInput(inputId = "year7",
+                    sep="", 
+                    label="Year",
+                    min=1990,
+                    max=2018,
+                    value = 1990,
+                    step = 1,
+                    animate = animationOptions(interval=500)
+        )
+
+renderPlotly({
+  theseYears = c(allYearsD[allYearsD < input$year7], input$year7)
+  p1 = drugData %>% 
+    filter(Year %in% theseYears) %>% 
+    plot_ly(x = ~Age, y = ~Convictions, split = ~Year,
+            type = 'scatter', mode = 'lines',
+            text = ~paste0('Year: ', Year,
+                           ' <br>Age: ', Age,
+                           ' <br>Convictions: ', round(Convictions,digits=1),"   "),
+            hoverinfo = 'text'
+      ) %>% 
+      layout(xaxis = list(showline = FALSE,
+                          range = c(12,90),
+                          type = 'category',
+                          tickfont = list(size = 14),
+                          tickangle = 0,
+                          dtick = 6,
+                          titlefont = list(size = 16),
+                          title = 'Age'),
+             yaxis = list(tickfont = list(size = 14),
+                          titlefont = list(size = 16),
+                          title = paste0("Convictions (",MEASURE7,")"),
+                          range = c(0,topY7))
+      ) %>% layout(hovermode = 'x')
+    p1$elementId = NULL
+    p1
+  })
+```
+
+### Offences
+
+Convictions for the offences of **common assault** and **breach of the peace** made up almost 30% of all convictions in Scotland’s courts in 2018. it is not surprising then that these two offences follow the typical pattern that we have seen of  late teenage peaks followed by a gradual decline in convictions for young people  and ending around 2018 with a much wider spread of convictions from age 18 to around 40.
+
+## Differences by gender
+
+Males accounted for 80% of convictions in Scotland’s courts in 2017-18, it is therefore not surprising that the majority of our age crime curves are skewed by male convictions. This section will concentrate on those crimes that females are most commonly convicted of and seek to tease out any differing patterns in the age crime curves.
+
+### All crimes and offences - females
+
+When we consider **all crimes and offences** for which females are convicted, we see a peak around age 23 in 1990. This is older than the peak at age 18 for males. Over time we see convictions fluctuate but by 2018 we see convictions peak around the mid-30s.
+
+```{r allCOF, echo=FALSE}
+# select vectors for THIS plot
+TYPE8 = tabIndex$CrimeType[1]
+GENDER8 = gendersAre[2]
+MEASURE8 = measuresAre[2]
+#print(TYPE1)
+allCOF = subset(allCrimes,
+                   `Crime Type` == TYPE8 & 
+                     Gender == GENDER8 & 
+                     `Measurement Type` == MEASURE8 & 
+                     Age != "All")
+topY8 = max(allCOF$Convictions)
+  
+sliderInput(inputId = "year8",
+                    sep="", 
+                    label="Year",
+                    min=1990,
+                    max=2018,
+                    value = 1990,
+                    step = 1,
+                    animate = animationOptions(interval=500)
+        )
+
+renderPlotly({
+  theseYears = c(allYears[allYearsD < input$year8], input$year8)
+  p1 = allCOF %>% 
+    filter(Year %in% theseYears) %>% 
+    plot_ly(x = ~Age, y = ~Convictions, split = ~Year,
+            type = 'scatter', mode = 'lines',
+            text = ~paste0('Year: ', Year,
+                           ' <br>Age: ', Age,
+                           ' <br>Convictions: ', round(Convictions,digits=1),"   "),
+            hoverinfo = 'text'
+      ) %>%
+    layout(xaxis = list(showline = FALSE,
+                        range = c(12,90),
+                        type = 'category',
+                        tickfont = list(size = 14),
+                        tickangle = 0,
+                        dtick = 6,
+                        titlefont = list(size = 16),
+                        title = 'Age'),
+           yaxis = list(tickfont = list(size = 14),
+                        titlefont = list(size = 16),
+                        title = paste0("Convictions (",MEASURE8,")"),
+                        range = c(0,topY8))
+    ) %>% 
+    layout(hovermode = 'x')
+  
+    p1$elementId = NULL # deals with weird shiny/plotly conflict
+    p1 # output the plot
+  })
+```
+
+### Shoplifting - females
+
+**Shoplifting** accounts for a third of the **crimes** that females are convicted of in Scotland’s courts. When we look at the age crime curve we see that the most common age for convictions in 1990 was between 17 and 24 years with convictions gradually tailing off after this age. However, by 2018 we see a different pattern; now we see a slow increase in convictions with age peaking at between ages 30-35 before gradually declining again until age 60.
+
+```{r shopliftF, echo=FALSE}
+
+GENDER9 = gendersAre[3]
+MEASURE9 = measuresAre[2]
+TYPE9 = tabIndex$CrimeType[18]
+
+shopliftFData = subset(allCrimes,
+                   `Crime Type` == TYPE9 & 
+                     Gender == GENDER9 & 
+                     `Measurement Type` == MEASURE9 & 
+                     Age != "All")
+topY9 = max(shopliftFData$Convictions)
+
+sliderInput(inputId = "year9",
+                    sep="", 
+                    label="Year",
+                    min=1990,
+                    max=2018,
+                    value = 1990,
+                    step = 1,
+                    animate = animationOptions(interval=500)
+        )
+
+renderPlotly({
+  theseYears = c(allYears[allYears < input$year9], input$year9)
+  p1 = shopliftFData %>% 
+    filter(Year %in% theseYears) %>% 
+    plot_ly(x = ~Age, y = ~Convictions, split = ~Year,
+            type = 'scatter', mode = 'lines',
+            text = ~paste0('Year: ', Year,
+                           ' <br>Age: ', Age,
+                           ' <br>Convictions: ', round(Convictions,digits=1),"   "),
+            hoverinfo = 'text'
+      ) %>% 
+      layout(xaxis = list(showline = FALSE,
+                          range = c(12,90),
+                          type = 'category',
+                          tickfont = list(size = 14),                       
+                          tickangle = 0,
+                          dtick = 6,
+                          titlefont = list(size = 16),
+                          title = 'Age'),
+             yaxis = list(tickfont = list(size = 14),
+                          titlefont = list(size = 16),
+                          title = paste0("Convictions (",MEASURE9,")"),
+                          range = c(0,topY9))
+      ) %>% layout(hovermode = 'x')
+    p1$elementId = NULL
+    p1
+  })
+```
+
+### Prostitution - females
+
+It is interesting to notice what has happened to convictions for **crimes of prostitution** over time. In 1990, there was a significant peak in convictions for 21 year old women. Over time we have seen convictions decrease markedly until in 2018 there were only a handful of convictions for women in their mid-30s.
+
+```{r prost, echo=FALSE}
+
+GENDER10 = gendersAre[3]
+MEASURE10 = measuresAre[2]
+TYPE10 = tabIndex$CrimeType[11]
+
+prostData = subset(allCrimes,
+                   `Crime Type` == TYPE10 & 
+                     Gender == GENDER10 & 
+                     `Measurement Type` == MEASURE10 & 
+                     Age != "All")
+topY10 = max(prostData$Convictions)
+
+sliderInput(inputId = "year10",
+                    sep="", 
+                    label="Year",
+                    min=1990,
+                    max=2018,
+                    value = 1990,
+                    step = 1,
+                    animate = animationOptions(interval=500)
+        )
+
+renderPlotly({
+  theseYears = c(allYears[allYears < input$year10], input$year10)
+  p1 = prostData %>% 
+    filter(Year %in% theseYears) %>% 
+    plot_ly(x = ~Age, y = ~Convictions, split = ~Year,
+            type = 'scatter', mode = 'lines',
+            text = ~paste0('Year: ', Year,
+                           ' <br>Age: ', Age,
+                           ' <br>Convictions: ', round(Convictions,digits=1),"   "),
+            hoverinfo = 'text'
+      ) %>% 
+      layout(xaxis = list(showline = FALSE,
+                          range = c(12,90),
+                          type = 'category',
+                          tickfont = list(size = 14),                       
+                          tickangle = 0,
+                          dtick = 6,
+                          titlefont = list(size = 16),
+                          title = 'Age'),
+             yaxis = list(tickfont = list(size = 14),
+                          titlefont = list(size = 16),
+                          title = paste0("Convictions (",MEASURE10,")"),
+                          range = c(0,topY10))
+      ) %>% layout(hovermode = 'x')
+    p1$elementId = NULL
+    p1
+  })
+```
+
+### Drug crimes - females
+
+The pattern of convictions for **women** convicted of **drug crimes** has changed over time. In 1990 we see relatively low levels of conviction with a small peak noticeable at age 21. We see convictions increasing throughout the 1990s, particularly for women in their early 20s. More recently, we continue to see the age of women being convicted getting older, with a peak now in the late 30s.
+
+```{r drugF, echo=FALSE}
+
+GENDER11 = gendersAre[2]
+MEASURE11 = measuresAre[2]
+TYPE11 = tabIndex$CrimeType[28]
+
+drugFData = subset(allCrimes,
+                   `Crime Type` == TYPE11 & 
+                     Gender == GENDER11 & 
+                     `Measurement Type` == MEASURE11 & 
+                     Age != "All")
+topY11 = max(drugFData$Convictions)
+
+sliderInput(inputId = "year11",
+                    sep="", 
+                    label="Year",
+                    min=1990,
+                    max=2018,
+                    value = 1990,
+                    step = 1,
+                    animate = animationOptions(interval=500)
+        )
+
+renderPlotly({
+  theseYears = c(allYearsD[allYearsD < input$year11], input$year11)
+  p1 = drugFData %>% 
+    filter(Year %in% theseYears) %>% 
+    plot_ly(x = ~Age, y = ~Convictions, split = ~Year,
+            type = 'scatter', mode = 'lines',
+            text = ~paste0('Year: ', Year,
+                           ' <br>Age: ', Age,
+                           ' <br>Convictions: ', round(Convictions,digits=1),"   "),
+            hoverinfo = 'text'
+      ) %>% 
+      layout(xaxis = list(showline = FALSE,
+                          range = c(12,90),
+                          type = 'category',
+                          tickfont = list(size = 14),                     
+                          tickangle = 0,                           
+                          dtick = 6,
+                          titlefont = list(size = 16),
+                          title = 'Age'),
+             yaxis = list(tickfont = list(size = 14),
+                          titlefont = list(size = 16),
+                          title = paste0("Convictions (",MEASURE11,")"),
+                          range = c(0,topY11))
+      ) %>% layout(hovermode = 'x')
+    p1$elementId = NULL
+    p1
+  })
+```
+
+## Conclusion
+
+Overall the decline in convictions over time has been driven predominantly by a decline in convictions for young people. There are some interesting exceptions to this pattern with some crimes displaying different trends and apparent gender differences within some crime/offence types.
+
+To explore  the crimes/offences that interest you in more detail visit our [shinyApp](https://scotland.shinyapps.io/sg-convictions/).
+
+## Re-use and Enquiries
+
+You may use or re-use this information (not including logos) free of charge in any format or medium, under the terms of the Open Government Licence. See:
+http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/ 
+
+For enquiries about this publication please contact:
+
+Jenny Leishman</br>
+Justice Analytical Services</br>
+Telephone: 0131 244 4297</br>
+e-mail: justiceanalysts@gov.scot 
+
+For general enquiries about Scottish Government statistics please contact:
+
+Office of the Chief Statistician</br>
+Telephone: 0131 244 0442</br>
+e-mail: statistics.enquiries@gov.scot 
